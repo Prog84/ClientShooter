@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
+    [SerializeField] private float _clampPing = 1;
     [SerializeField] private EnemyCharacter _character;
     [SerializeField] private  EnemyGun _gun;
     private List<float> _receiveTimeInterval = new List<float>() {0f, 0f, 0f, 0f , 0f};
@@ -25,10 +26,13 @@ public class EnemyController : MonoBehaviour
     private float _lastReceiveTime = 0f;
     private Player _player;
 
-    public void Init(Player player)
+    public void Init(string key, Player player)
     {
+        _character.Init(key);
+        
         _player = player;
         _character.SetSpeed(player.speed);
+        _character.SetMaxHP(player.maxHP);
         _player.OnChange += OnChange;
     }
 
@@ -50,6 +54,7 @@ public class EnemyController : MonoBehaviour
         float interval = Time.time - _lastReceiveTime;
         _lastReceiveTime = Time.time;
         
+        if (interval > _clampPing) interval = _clampPing;
         _receiveTimeInterval.Add(interval);
         _receiveTimeInterval.RemoveAt(0);
     }
@@ -63,6 +68,13 @@ public class EnemyController : MonoBehaviour
         {
             switch (dataChange.Field)
             {
+                case "loss":
+                    MultiplayerManager.Instance.lossCounter.SetEnemyLoss((byte)dataChange.Value);
+                    break;
+                case "currentHP":
+                    if ((sbyte)dataChange.Value > (sbyte)dataChange.PreviousValue)
+                        _character.RestoreHP((sbyte)dataChange.Value);
+                    break;
                 case "pX":
                     position.x = (float)dataChange.Value;
                     break;
